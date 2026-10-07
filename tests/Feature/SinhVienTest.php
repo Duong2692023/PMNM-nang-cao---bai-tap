@@ -59,7 +59,7 @@ class SinhVienTest extends TestCase
         foreach (range(1, 11) as $number) {
             SinhVien::create([
                 'ma_sv' => sprintf('SV%03d', $number),
-                'ho_ten' => 'Student ' . $number,
+                'ho_ten' => 'Student '.$number,
                 'lop_hoc_id' => $lopHoc->id,
                 'email' => sprintf('student%d@example.test', $number),
                 'trang_thai' => true,
@@ -75,6 +75,84 @@ class SinhVienTest extends TestCase
             ->assertSee('page=2', false)
             ->assertSee('q=Student', false)
             ->assertSee('SV011');
+    }
+
+    public function test_student_list_can_be_sorted_in_both_directions(): void
+    {
+        $lopB = $this->createClass('Lop B', 'K2025');
+        $lopC = $this->createClass('Lop C', 'K2024');
+        $lopA = $this->createClass('Lop A', 'K2026');
+
+        foreach ([
+            ['SV003', 'Binh', $lopB],
+            ['SV001', 'An', $lopC],
+            ['SV002', 'Chi', $lopA],
+        ] as [$maSv, $hoTen, $lopHoc]) {
+            SinhVien::create([
+                'ma_sv' => $maSv,
+                'ho_ten' => $hoTen,
+                'lop_hoc_id' => $lopHoc->id,
+                'email' => strtolower($maSv).'@example.test',
+                'trang_thai' => true,
+            ]);
+        }
+
+        $expectedOrders = [
+            ['ma_sv', 'asc', ['SV001', 'SV002', 'SV003']],
+            ['ma_sv', 'desc', ['SV003', 'SV002', 'SV001']],
+            ['ho_ten', 'asc', ['SV001', 'SV003', 'SV002']],
+            ['ho_ten', 'desc', ['SV002', 'SV003', 'SV001']],
+            ['lop_hoc', 'asc', ['SV002', 'SV003', 'SV001']],
+            ['lop_hoc', 'desc', ['SV001', 'SV003', 'SV002']],
+            ['khoa_hoc', 'asc', ['SV001', 'SV003', 'SV002']],
+            ['khoa_hoc', 'desc', ['SV002', 'SV003', 'SV001']],
+        ];
+
+        foreach ($expectedOrders as [$sort, $direction, $expectedMaSv]) {
+            $response = $this->get(route('sinhvien.index', compact('sort', 'direction')));
+
+            $response->assertOk();
+            $this->assertSame(
+                $expectedMaSv,
+                $response->viewData('sinhviens')->getCollection()->pluck('ma_sv')->all()
+            );
+        }
+    }
+
+    public function test_student_status_can_be_toggled_from_the_list(): void
+    {
+        $lopHoc = $this->createClass('CNTT 1', 'K2025');
+        $sinhVien = SinhVien::create([
+            'ma_sv' => 'SV001',
+            'ho_ten' => 'Nguyen Van An',
+            'lop_hoc_id' => $lopHoc->id,
+            'email' => 'an@example.test',
+            'trang_thai' => true,
+        ]);
+
+        $this->get(route('sinhvien.index'))
+            ->assertOk()
+            ->assertSee(route('sinhvien.toggle-status', $sinhVien), false)
+            ->assertSee('Chuyển Nguyen Van An sang trạng thái ngừng');
+
+        $this->from(route('sinhvien.index'))
+            ->patch(route('sinhvien.toggle-status', $sinhVien))
+            ->assertRedirect(route('sinhvien.index'));
+        $this->assertDatabaseHas('sinh_viens', [
+            'id' => $sinhVien->id,
+            'trang_thai' => false,
+        ]);
+        $this->get(route('sinhvien.index'))
+            ->assertSee('Ngừng')
+            ->assertSee('Chuyển Nguyen Van An sang trạng thái hoạt động');
+
+        $this->from(route('sinhvien.index'))
+            ->patch(route('sinhvien.toggle-status', $sinhVien))
+            ->assertRedirect(route('sinhvien.index'));
+        $this->assertDatabaseHas('sinh_viens', [
+            'id' => $sinhVien->id,
+            'trang_thai' => true,
+        ]);
     }
 
     public function test_student_can_be_created_updated_and_deleted(): void

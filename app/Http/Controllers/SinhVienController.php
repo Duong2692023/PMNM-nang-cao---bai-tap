@@ -17,20 +17,43 @@ class SinhVienController extends Controller
             $perPage = 10;
         }
 
-        $sinhviens = SinhVien::query()
+        $sortable = [
+            'ma_sv' => 'sinh_viens.ma_sv',
+            'ho_ten' => 'sinh_viens.ho_ten',
+            'lop_hoc' => 'lop_hocs.ten_lop',
+            'khoa_hoc' => 'lop_hocs.khoa_hoc',
+        ];
+        $sort = $request->query('sort', 'id');
+        if (! is_string($sort) || ($sort !== 'id' && ! array_key_exists($sort, $sortable))) {
+            $sort = 'id';
+        }
+        $direction = $request->query('direction') === 'asc' ? 'asc' : 'desc';
+
+        $query = SinhVien::query()
             ->with('lopHoc')
             ->timTheoTen($request->query('q'))
             ->theoKhoaHoc($request->query('khoa_hoc'))
             ->theoLopHoc($request->query('lop_hoc_id'))
-            ->theoTrangThai($request->query('trang_thai'))
-            ->orderBy('id', 'desc')
-            ->paginate($perPage)
-            ->withQueryString();
+            ->theoTrangThai($request->query('trang_thai'));
+
+        if (in_array($sort, ['lop_hoc', 'khoa_hoc'], true)) {
+            $query->join('lop_hocs', 'sinh_viens.lop_hoc_id', '=', 'lop_hocs.id')
+                ->select('sinh_viens.*');
+        }
+
+        $query->orderBy($sort === 'id' ? 'sinh_viens.id' : $sortable[$sort], $sort === 'id' ? 'desc' : $direction);
+        if ($sort !== 'id') {
+            $query->orderBy('sinh_viens.id');
+        }
+
+        $sinhviens = $query->paginate($perPage)->withQueryString();
 
         return view('sinhvien.index', [
             'sinhviens' => $sinhviens,
             'perPage' => $perPage,
             'allowed' => $allowed,
+            'sort' => $sort,
+            'direction' => $direction,
             'lopHocs' => LopHoc::query()->orderBy('ten_lop')->get(),
             'khoaHocs' => LopHoc::query()
                 ->select('khoa_hoc')
@@ -38,6 +61,13 @@ class SinhVienController extends Controller
                 ->orderBy('khoa_hoc')
                 ->pluck('khoa_hoc'),
         ]);
+    }
+
+    public function toggleStatus(SinhVien $sinhvien)
+    {
+        $sinhvien->update(['trang_thai' => ! $sinhvien->trang_thai]);
+
+        return redirect()->back()->with('success', 'Đã cập nhật trạng thái sinh viên.');
     }
 
     public function create()

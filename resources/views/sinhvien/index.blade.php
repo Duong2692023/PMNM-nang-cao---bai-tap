@@ -47,6 +47,8 @@
                 @endforeach
             </select>
         </div>
+        <input type="hidden" name="sort" value="{{ $sort }}">
+        <input type="hidden" name="direction" value="{{ $direction }}">
         <div class="col-12">
             <button type="submit" class="btn btn-primary">Tìm kiếm</button>
             <a href="{{ route('sinhvien.index') }}" class="btn btn-outline-secondary">Xóa lọc</a>
@@ -63,10 +65,10 @@
             <thead class="table-light">
                 <tr>
                     <th>STT</th>
-                    <th>Mã số sinh viên</th>
-                    <th>Họ tên</th>
-                    <th>Lớp quản lý</th>
-                    <th>Khóa học</th>
+                    <th><x-sort-link column="ma_sv" label="Mã số sinh viên" :sort="$sort" :direction="$direction" /></th>
+                    <th><x-sort-link column="ho_ten" label="Họ tên" :sort="$sort" :direction="$direction" /></th>
+                    <th><x-sort-link column="lop_hoc" label="Lớp quản lý" :sort="$sort" :direction="$direction" /></th>
+                    <th><x-sort-link column="khoa_hoc" label="Khóa học" :sort="$sort" :direction="$direction" /></th>
                     <th>Email</th>
                     <th>Trạng thái</th>
                     <th>Hành động</th>
@@ -82,11 +84,21 @@
                         <td>{{ $sinhVien->lopHoc->khoa_hoc }}</td>
                         <td><a href="mailto:{{ $sinhVien->email }}">{{ $sinhVien->email }}</a></td>
                         <td>
-                            @if ($sinhVien->trang_thai)
-                                <span class="badge bg-success">Hoạt động</span>
-                            @else
-                                <span class="badge bg-secondary">Ngừng</span>
-                            @endif
+                            <form action="{{ route('sinhvien.toggle-status', $sinhVien) }}" method="POST" class="d-inline">
+                                @csrf
+                                @method('PATCH')
+                                @if ($sinhVien->trang_thai)
+                                    <button type="submit" class="badge border-0 bg-success"
+                                            aria-label="Chuyển {{ $sinhVien->ho_ten }} sang trạng thái ngừng">
+                                        Hoạt động
+                                    </button>
+                                @else
+                                    <button type="submit" class="badge border-0 bg-secondary"
+                                            aria-label="Chuyển {{ $sinhVien->ho_ten }} sang trạng thái hoạt động">
+                                        Ngừng
+                                    </button>
+                                @endif
+                            </form>
                         </td>
                         <td class="text-nowrap">
                             <a href="{{ route('sinhvien.edit', $sinhVien) }}" class="btn btn-sm btn-primary">Sửa</a>

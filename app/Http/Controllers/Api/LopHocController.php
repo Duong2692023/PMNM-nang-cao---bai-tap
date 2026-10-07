@@ -6,16 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\LopHoc;
 use Illuminate\Http\Request;
 use App\Http\Resources\LopHocResource;
+use App\Traits\ApiResponse;
 
 class LopHocController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
+    use ApiResponse;
     public function index()
     {
         //
-        return LopHocResource::collection(LopHoc::all());
+        return $this->successResponse(LopHocResource::collection(LopHoc::all()));
     }
 
     /**
@@ -24,6 +26,7 @@ class LopHocController extends Controller
     public function store(Request $request)
     {
         //
+        return $this->successResponse(new LopHocResource(LopHoc::create($request->all())), 'Lớp học được tạo thành công', 201);
     }
 
     /**

@@ -30,5 +30,5 @@ Route::patch('sinhvien/{sinhvien}/toggle-status', [SinhVienController::class, 't
 Route::resource('sinhvien', SinhVienController::class);
 Route::resource('lophoc', LopHocController::class);
 // Menu không cần trang chi tiết -> bỏ route show
-Route::resource('menu', MenuController::class)->except('show');
+Route::middleware('check.giohanhchinh')->resource('menu', MenuController::class)->except('show');
 //
